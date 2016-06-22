@@ -13,13 +13,11 @@ class Page
       @version = hash["Version"]
       @liveViewMode = hash["LiveViewMode"]
       @liveViewEdgeToEdge = hash["LiveViewEdgeToEdge"]
-      @pages = hash["Pages"].map {|item| if item =~ /^(.+?)\.playgroundpage$/; $1; end }
     else
       @name = name
       @version = "1.0"
-      @liveViewMode = "LiveViewEdgeToEdge"
-      @liveViewEdgeToEdge = true
-      @pages = [name]
+      @liveViewMode = "VisibleByDefault" # or HiddenByDefault
+      @liveViewEdgeToEdge = true         # or false
     end
     createDirectories
     createSources
@@ -31,7 +29,7 @@ class Page
     fw.write("// Contents.swift")
     fw.close
     fw = File::open(directory + "LiveView.swift", "w")
-    fw.write("// LiveView.swift")
+    fw.write("// Contents.swift")
     fw.close
   end
 
@@ -56,7 +54,6 @@ class Page
       :Version => @version,
       :LiveViewMode => @liveViewMode,
       :LiveViewEdgeToEdge => @liveViewEdgeToEdge,
-      :Pages => @pages.map {|item| item + ".playgroundpage"}
     }
   end
 

@@ -52,7 +52,7 @@ struct Book {
         }
     }
     
-    func plist() -> [String:AnyObject] {
+    func manifest() -> [String:AnyObject] {
         var dict: [String:AnyObject] = [
             "Name" : name,
             "Version" : version,
@@ -67,8 +67,8 @@ struct Book {
         return dict
     }
     
-    func output() -> Bool {
-        let nsdictionary = plist() as NSDictionary
+    func writeMenifest() -> Bool {
+        let nsdictionary = manifest() as NSDictionary
         return nsdictionary.write(toFile: manifestPath, atomically: false)
     }
     
@@ -76,7 +76,7 @@ struct Book {
         // create book
         do {
             try FileManager.default().createDirectory(atPath: contentsPath, withIntermediateDirectories: true, attributes: nil)
-            if !output() {
+            if !writeMenifest() {
                 throw NSError.error(description: "Can not write plist.")
             }
         } catch {

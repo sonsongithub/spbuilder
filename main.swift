@@ -40,18 +40,6 @@ struct Book {
         print(chapters)
     }
     
-    var path: String {
-        get {
-            return "./\(name).playgroundbook"
-        }
-    }
-    
-    var contentsPath: String {
-        get {
-            return "./\(path)/Contents"
-        }
-    }
-    
     func getChapter(name: String) throws -> Chapter {
         for i in 0..<chapters.count {
             if chapters[i].name == name {
@@ -95,6 +83,8 @@ struct Book {
     func create() throws {
         // create book
         do {
+            let path = "./\(name).playgroundbook"
+            let contentsPath = "./\(path)/Contents"
             try FileManager.default().createDirectory(atPath: contentsPath, withIntermediateDirectories: true, attributes: nil)
             try writeManifest(at: "./\(path)/Contents/Manifest.plist")
         } catch {
@@ -168,9 +158,24 @@ struct Page {
         let dict: [String:AnyObject] = [
             "Name" : name,
             "Version" : version,
+            "LiveViewMode" : "HiddenByDefault"
             ]
         return dict
     }
+    
+    func parepareDefaultFiles() throws {
+        let liveViewPath = "./Contents/Chapters/\(chapterName).playgroundchapter/Pages/\(name).playgroundpage/LiveView.swift"
+        let contentsPath = "./Contents/Chapters/\(chapterName).playgroundchapter/Pages/\(name).playgroundpage/Contents.swift"
+        let liveViewTemplate = "// LiveView.swift"
+        let contentsTemplate = "// Contents.swift"
+        do {
+            try liveViewTemplate.write(toFile: liveViewPath, atomically: false, encoding: .utf8)
+            try contentsTemplate.write(toFile: contentsPath, atomically: false, encoding: .utf8)
+        } catch {
+            throw error
+        }
+    }
+    
     
     func writeManifest() throws {
         let at = "./Contents/Chapters/\(chapterName).playgroundchapter/Pages/\(name).playgroundpage/"
@@ -208,7 +213,7 @@ func loadBook() throws -> Book {
             return Book(name: name, version: version, contentIdentifier: contentIdentifier, contentVersion: contentVersion, imageReference: imageReference, deploymentTarget: deploymentTarget, chapters: chapters)
             
         } else {
-            throw NSError.error(description: "Manifest.plist is deformed.")
+            throw NSError.error(description: "Manifest.plist is malformed.")
         }
     } else {
         throw NSError.error(description: "Can not find Manifest.plist. Moved inside playgroundbook's directory.")
@@ -255,6 +260,7 @@ func addPage(argc: Int, arguments: [String]) throws {
             let page = Page(name: arguments[2], chapterName: chapter.name)
             try chapter.add(page: page)
             try page.writeManifest()
+            try page.parepareDefaultFiles()
         } catch {
             throw error
         }

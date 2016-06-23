@@ -31,13 +31,11 @@ struct Book {
         contentVersion = aContentVersion
         imageReference = anImageReference
         deploymentTarget = aDeploymentTarget
-        print(arrayChapters)
         chapters = arrayChapters.map({ (name) -> Chapter in
             let title = name.replacingOccurrences(of: ".playgroundchapter", with: "")
             print("\(name) => \(title)")
             return Chapter(name: title)
         })
-        print(chapters)
     }
     
     func getChapter(name: String) throws -> Chapter {
@@ -50,6 +48,9 @@ struct Book {
     }
     
     mutating func add(chapter: Chapter) throws {
+        if chapters.map({$0.name}).index(of: chapter.name) != nil {
+            throw NSError.error(description: "Already page has been added.")
+        }
         chapters.append(chapter)
         do {
             try writeManifest()
@@ -80,6 +81,18 @@ struct Book {
         }
     }
     
+    func parepareDefaultFiles() throws {
+        let path = "./\(name).playgroundbook"
+        let sourcesPath = "./\(path)/Contents/Sources"
+        let resourcesPath = "./\(path)/Contents/Resources"
+        do {
+            try FileManager.default().createDirectory(atPath: sourcesPath, withIntermediateDirectories: true, attributes: nil)
+            try FileManager.default().createDirectory(atPath: resourcesPath, withIntermediateDirectories: true, attributes: nil)
+        } catch {
+            throw error
+        }
+    }
+    
     func create() throws {
         // create book
         do {
@@ -87,6 +100,7 @@ struct Book {
             let contentsPath = "./\(path)/Contents"
             try FileManager.default().createDirectory(atPath: contentsPath, withIntermediateDirectories: true, attributes: nil)
             try writeManifest(at: "./\(path)/Contents/Manifest.plist")
+            try parepareDefaultFiles()
         } catch {
             throw error
         }
@@ -98,15 +112,27 @@ struct Chapter {
     var pages: [Page]
     let version: String
     
-    init(name aName: String, version aVersion: String = "1.0", pages arrayPages: [String] = []) {
+    init(name aName: String, version aVersion: String = "1.0") {
         print("Chapter name = \(aName)")
         name = aName
         version = aVersion
-        pages = arrayPages.map({ (name) -> Page in
-            let title = name.replacingOccurrences(of: ".playgroundpage", with: "")
-            print("\(name) => \(title)")
-            return Page(name: title, chapterName: name)
-        })
+        pages = []
+        
+        let at = "./Contents/Chapters/\(name).playgroundchapter"
+        let chapterManifestPath = "\(at)/Manifest.plist"
+        if FileManager.default().isReadableFile(atPath: chapterManifestPath) {
+            if let dict = NSDictionary(contentsOfFile: chapterManifestPath) {
+                if let name = dict["Name"] as? String,
+                    version = dict["Version"] as? String {
+                    let pageNames = dict["Pages"] as? [String] ?? [] as [String]
+                    
+                    pages = pageNames.map({ (name) -> Page in
+                        let title = name.replacingOccurrences(of: ".playgroundpage", with: "")
+                        return Page(name: title, chapterName: name)
+                    })
+                }
+            }
+        }
     }
 
     func manifest() -> [String:AnyObject] {
@@ -119,6 +145,9 @@ struct Chapter {
     }
     
     mutating func add(page: Page) throws {
+        if pages.map({$0.name}).index(of: page.name) != nil {
+            throw NSError.error(description: "Already page has been added.")
+        }
         pages.append(page)
         do {
             try writeManifest()
@@ -129,8 +158,12 @@ struct Chapter {
     
     func writeManifest() throws {
         let at = "./Contents/Chapters/\(name).playgroundchapter"
+        let sourcesPath = "./\(at)/Sources"
+        let resourcesPath = "./\(at)/Resources"
         do {
             try FileManager.default().createDirectory(atPath: at, withIntermediateDirectories: true, attributes: nil)
+            try FileManager.default().createDirectory(atPath: sourcesPath, withIntermediateDirectories: true, attributes: nil)
+            try FileManager.default().createDirectory(atPath: resourcesPath, withIntermediateDirectories: true, attributes: nil)
         } catch {
             print(error)
         }
@@ -175,7 +208,6 @@ struct Page {
             throw error
         }
     }
-    
     
     func writeManifest() throws {
         let at = "./Contents/Chapters/\(chapterName).playgroundchapter/Pages/\(name).playgroundpage/"
